@@ -9,7 +9,7 @@ This script will fetch a random comic URL, add it as a link to your greeting tex
 ## Usage
 Define your [Markdown](https://www.markdownguide.org/basic-syntax/#links) greeting message in [variable](GoodMorning.java):
 ```java
-GREETING_TEMPLATE = "[Good morning]({0}) \uD83D\uDC4B"
+GREETING_TEMPLATE = "[Good morning]({0}) {1}"; // link, emoji
 ```
 Configure a keyboard shortcut to execute:
 ```shell

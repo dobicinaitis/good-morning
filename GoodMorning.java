@@ -17,7 +17,9 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.MessageFormat;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -33,19 +35,26 @@ import java.util.stream.IntStream;
  */
 public class GoodMorning {
 
-    public static final String GREETING_TEMPLATE = "[Good morning]({0}) \uD83D\uDC4B";
+    public static final String GREETING_TEMPLATE = "[Good morning]({0}) {1}"; // link, emoji
     public static final String COMIC_FEED_URL = "https://www.monkeyuser.com/feed.xml";
     public static final String IMAGE_XPATH_EXPRESSION = "/rss/channel/item/description[contains(text(),'.png')]";
+    public static final List<String> EMOJIS = Arrays.asList(":wave:", ":santa:", ":snowman_with_snow:", ":snowflake:", ":christmas_tree:");
 
     public static void main(String[] args) throws Exception {
         final String imageUrl = getRandomImageUrl();
-        final String message = MessageFormat.format(GREETING_TEMPLATE, imageUrl);
+        final String emoji = getRandomEmoji();
+        final String message = MessageFormat.format(GREETING_TEMPLATE, imageUrl, emoji);
         pasteText(message);
     }
 
     private static String getRandomImageUrl() {
         final List<String> comicUrls = getAllImageUrls();
         return comicUrls.get(ThreadLocalRandom.current().nextInt(comicUrls.size()));
+    }
+
+    private static String getRandomEmoji(){
+        final Random random = new Random();
+        return EMOJIS.get(random.nextInt(EMOJIS.size()));
     }
 
     private static List<String> getAllImageUrls() {
