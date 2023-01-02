@@ -38,7 +38,7 @@ public class GoodMorning {
     public static final String GREETING_TEMPLATE = "[Good morning]({0}) {1}"; // link, emoji
     public static final String COMIC_FEED_URL = "https://www.monkeyuser.com/feed.xml";
     public static final String IMAGE_XPATH_EXPRESSION = "/rss/channel/item/description[contains(text(),'.png')]";
-    public static final List<String> EMOJIS = Arrays.asList(":wave:", ":santa:", ":snowman_with_snow:", ":snowflake:", ":christmas_tree:");
+    public static final List<String> EMOJIS = Arrays.asList(":wave:");
 
     public static void main(String[] args) throws Exception {
         final String imageUrl = getRandomImageUrl();
