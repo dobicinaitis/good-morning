@@ -1,6 +1,6 @@
 # [Good morning](https://www.monkeyuser.com) 👋
 
-Spice up your daily "Good morning" greeting with a link to a random <a href="https://www.monkeyuser.com">MonkeyUser.com</a> comic. \
+Spice up your daily "Good morning" greeting with a link to a random <a href="https://www.workchronicles.com">WorkChronicles.com</a> comic. \
 This script will fetch a random comic URL, add it as a link to your greeting text and paste it.
 
 ## Requirements
@@ -21,13 +21,19 @@ Example
 
 **plain**
 ```text
-[Good morning](https://www.monkeyuser.com/assets/images/2019/120-pivoting.png) 👋
+[Good morning](https://workchronicles.com/wp-content/uploads/2023/02/nohello-01-2.png) 👋
 ```
 
 **rendered**
 
-[Good morning](https://www.monkeyuser.com/assets/images/2019/120-pivoting.png) 👋
+[Good morning](https://workchronicles.com/wp-content/uploads/2023/02/nohello-01-2.png) 👋
 
 ### Configuring keyboard shortcuts
 Ubuntu [guide](https://help.ubuntu.com/stable/ubuntu-help/keyboard-shortcuts-set.html.en), example: \
 ![Keyboard shortcut configuration](https://cdn.dobicinaitis.dev/git/good-morning-keyboard-shortcut.png)
+
+## Past sources
+
+| Comic source                                 |                                              Last commit                                              |
+|----------------------------------------------|:-----------------------------------------------------------------------------------------------------:|
+| [MonkeyUser.com](https://www.monkeyuser.com) | [91132cb](https://github.com/dobicinaitis/good-morning/tree/91132cb2971f1f5a80652440bec223b4ecb46419) | 
