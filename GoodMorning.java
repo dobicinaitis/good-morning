@@ -1,29 +1,17 @@
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 import java.awt.*;
-import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Spice up your daily "Good morning" greeting with a link to a random comic.
@@ -36,76 +24,99 @@ import java.util.stream.IntStream;
 public class GoodMorning {
 
     public static final String GREETING_TEMPLATE = "[Good morning]({0}) {1}"; // link, emoji
-    public static final String COMIC_FEED_URL = "https://workchronicles.com/feed";
-    public static final String IMAGE_XPATH_EXPRESSION = "/rss/channel/item/encoded[contains(text(),'.png')]";
+    public static final String COMIC_SOURCE_URL_TEMPLATE = "https://workchronicles.com/comics/page/{0}";
     public static final List<String> EMOJIS = Arrays.asList(":wave:");
+    private static final HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
 
     public static void main(String[] args) throws Exception {
-        final String imageUrl = getRandomImageUrl();
-        final String emoji = getRandomEmoji();
-        final String message = MessageFormat.format(GREETING_TEMPLATE, imageUrl, emoji);
+        var comicUrl = getRandomComicUrl();
+        var emoji = getRandomEmoji();
+        var message = MessageFormat.format(GREETING_TEMPLATE, comicUrl, emoji);
+        //System.out.println(message);
         pasteText(message);
     }
 
-    private static String getRandomImageUrl() {
-        final List<String> comicUrls = getAllImageUrls();
-        return comicUrls.get(ThreadLocalRandom.current().nextInt(comicUrls.size()));
-    }
-
     private static String getRandomEmoji() {
-        final Random random = new Random();
-        return EMOJIS.get(random.nextInt(EMOJIS.size()));
+        return EMOJIS.get(ThreadLocalRandom.current().nextInt(EMOJIS.size()));
     }
 
-    private static List<String> getAllImageUrls() {
-        final Document comicFeed = loadRssFeed();
-        final XPath xPath = XPathFactory.newInstance().newXPath();
-        final NodeList descriptionNodes;
+    /**
+     * Fetches a random comic URL from WorkChronicles.com.
+     */
+    private static String getRandomComicUrl() {
+        // pick a random page from the website
+        var randomPageNo = getRandomPageNumber();
+        // extract all comic image URLs
+        var pageUrl = MessageFormat.format(COMIC_SOURCE_URL_TEMPLATE, randomPageNo);
+        var comicUrls = extractComicUrlsFromPage(pageUrl);
+        // return a random image URL
+        var randomComicUrl = comicUrls.get(ThreadLocalRandom.current().nextInt(comicUrls.size()));
+        return randomComicUrl;
+    }
+
+    /**
+     * Picks a random page number from the comic website.
+     */
+    private static int getRandomPageNumber() {
+        // the total page count can be found in the <title> tag (starting from page No. 2nd)
+        var pageCountDiscoveryUrl = MessageFormat.format(COMIC_SOURCE_URL_TEMPLATE, 2);
+        var totalPageCount = getTotalPageCount(getWebsiteSource(pageCountDiscoveryUrl));
+        return ThreadLocalRandom.current().nextInt(1, totalPageCount + 1);
+    }
+
+    /**
+     * Extracts all comic URLs from a given HTML page.
+     */
+    private static List<String> extractComicUrlsFromPage(String url) {
+        var htmlSource = getWebsiteSource(url);
+        var pattern = Pattern.compile("(<figure .* src=\")(https://.*.png)(\" .*)");
+        var matcher = pattern.matcher(htmlSource);
+        var comicUrls = new ArrayList<String>();
+        while (matcher.find()) {
+            comicUrls.add(matcher.group(2));
+        }
+        return comicUrls;
+    }
+
+    /**
+     * Extracts the total page count from a website.
+     */
+    private static int getTotalPageCount(String htmlSource) {
+        var pattern = Pattern.compile("(<title>.*?Page )(\\d+)( of )(\\d+)(.*</title>)");
+        var matcher = pattern.matcher(htmlSource);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(4));
+        }
+        return 0;
+    }
+
+    /**
+     * Fetches the HTML source code of a given URL.
+     */
+    private static String getWebsiteSource(String url) {
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
 
         try {
-            descriptionNodes = (NodeList) xPath.compile(IMAGE_XPATH_EXPRESSION).evaluate(comicFeed, XPathConstants.NODESET);
-        } catch (XPathExpressionException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (descriptionNodes.getLength() == 0) {
-            throw new RuntimeException("Could not extract \"encoded\" tags from RSS feed.");
-        }
-
-        // now we need to extract URLs from the <description> elements that contain some extra HTML
-        Pattern urlPattern = Pattern.compile("src=\"(.*?)\"");
-        final List<String> imageUrls = IntStream.range(0, descriptionNodes.getLength())
-                .parallel()
-                .mapToObj(descriptionNodes::item)
-                .flatMap(item -> urlPattern.matcher(item.getTextContent()).results())
-                .map(match -> match.group(1))
-                .collect(Collectors.toList());
-
-        if (imageUrls.size() == 0) {
-            throw new RuntimeException("Could not extract image URLs from \"encoded\" tags.");
-        }
-
-        return imageUrls;
-    }
-
-    private static Document loadRssFeed() {
-        try {
-            final URLConnection connection = new URL(COMIC_FEED_URL).openConnection();
-            final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            final DocumentBuilder builder = factory.newDocumentBuilder();
-            return builder.parse(connection.getInputStream());
-        } catch (IOException | ParserConfigurationException | SAXException e) {
-            System.out.println("No comic today ;(");
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.body();
+        } catch (IOException | InterruptedException e) {
+            System.out.println("Could not fetch HTML content.");
             throw new RuntimeException(e);
         }
     }
 
+    /**
+     * Pastes the given text to whichever app is currently in focus.
+     */
     private static void pasteText(String text) throws AWTException {
-        final StringSelection stringSelection = new StringSelection(text);
-        final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        var stringSelection = new StringSelection(text);
+        var clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         clipboard.setContents(stringSelection, stringSelection);
 
-        final Robot robot = new Robot();
+        var robot = new Robot();
         robot.keyPress(controlOrCommandKey());
         robot.delay(200);
         robot.keyPress(KeyEvent.VK_V);
@@ -118,7 +129,7 @@ public class GoodMorning {
     }
 
     private static boolean isRunningOnAMac() {
-        final String osName = System.getProperty("os.name");
+        var osName = System.getProperty("os.name");
         return osName.toLowerCase().startsWith("mac os");
     }
 }
