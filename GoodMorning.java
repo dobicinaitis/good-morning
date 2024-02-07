@@ -3,6 +3,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -34,6 +35,7 @@ public class GoodMorning {
         var message = MessageFormat.format(GREETING_TEMPLATE, comicUrl, emoji);
         //System.out.println(message);
         pasteText(message);
+        openUrl(comicUrl);
     }
 
     private static String getRandomEmoji() {
@@ -131,5 +133,20 @@ public class GoodMorning {
     private static boolean isRunningOnAMac() {
         var osName = System.getProperty("os.name");
         return osName.toLowerCase().startsWith("mac os");
+    }
+
+    /**
+     * Opens a URL in the default web browser.
+     */
+    private static void openUrl(String url) {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            try {
+                var uri = new URI(url);
+                Desktop.getDesktop().browse(uri);
+            } catch (IOException | URISyntaxException e) {
+                System.out.println("Could not open [" + url + "] in the default browser.");
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
