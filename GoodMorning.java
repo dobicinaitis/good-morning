@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
+import static java.net.URLDecoder.decode;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Spice up your daily "Good morning" greeting with a link to a random comic.
  * This script will fetch a random comic URL, add it as a link to your greeting text and paste it.
@@ -25,7 +28,7 @@ import java.util.regex.Pattern;
 public class GoodMorning {
 
     public static final String GREETING_TEMPLATE = "[Good morning]({0}) {1}"; // link, emoji
-    public static final String COMIC_SOURCE_URL_TEMPLATE = "https://workchronicles.com/comics/page/{0}";
+    public static final String COMIC_SOURCE_URL = "https://www.reddit.com/r/workchronicles/hot.json?limit=100";
     public static final List<String> EMOJIS = Arrays.asList(":wave:");
     private static final HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
 
@@ -46,24 +49,10 @@ public class GoodMorning {
      * Fetches a random comic URL from WorkChronicles.com.
      */
     private static String getRandomComicUrl() {
-        // pick a random page from the website
-        var randomPageNo = getRandomPageNumber();
         // extract all comic image URLs
-        var pageUrl = MessageFormat.format(COMIC_SOURCE_URL_TEMPLATE, randomPageNo);
-        var comicUrls = extractComicUrlsFromPage(pageUrl);
+        var comicUrls = extractComicUrlsFromPage(COMIC_SOURCE_URL);
         // return a random image URL
-        var randomComicUrl = comicUrls.get(ThreadLocalRandom.current().nextInt(comicUrls.size()));
-        return randomComicUrl;
-    }
-
-    /**
-     * Picks a random page number from the comic website.
-     */
-    private static int getRandomPageNumber() {
-        // the total page count can be found in the <title> tag (starting from page No. 2nd)
-        var pageCountDiscoveryUrl = MessageFormat.format(COMIC_SOURCE_URL_TEMPLATE, 2);
-        var totalPageCount = getTotalPageCount(getWebsiteSource(pageCountDiscoveryUrl));
-        return ThreadLocalRandom.current().nextInt(1, totalPageCount + 1);
+        return comicUrls.get(ThreadLocalRandom.current().nextInt(comicUrls.size()));
     }
 
     /**
@@ -71,25 +60,25 @@ public class GoodMorning {
      */
     private static List<String> extractComicUrlsFromPage(String url) {
         var htmlSource = getWebsiteSource(url);
-        var pattern = Pattern.compile("(<figure .* src=\")(https://.*.png)(\" .*)");
+        var pattern = Pattern.compile("(\"url\": \")(https://[^\\s\"]+_4800x4800.png)(\")");
         var matcher = pattern.matcher(htmlSource);
         var comicUrls = new ArrayList<String>();
         while (matcher.find()) {
-            comicUrls.add(matcher.group(2));
+            var imageUrl = extractFinalImageUrl(matcher.group(2));
+            comicUrls.add(imageUrl);
         }
         return comicUrls;
     }
 
     /**
-     * Extracts the total page count from a website.
+     * Extracts the S3 image link from a nested URL.
+     *
+     * @param nestedUrl the URL containing an S3 image link in the query string
+     * @return the extracted S3 image link
      */
-    private static int getTotalPageCount(String htmlSource) {
-        var pattern = Pattern.compile("(<title>.*?Page )(\\d+)( of )(\\d+)(.*</title>)");
-        var matcher = pattern.matcher(htmlSource);
-        if (matcher.find()) {
-            return Integer.parseInt(matcher.group(4));
-        }
-        return 0;
+    private static String extractFinalImageUrl(String nestedUrl) {
+        var urlEncoded = nestedUrl.split("steep/")[1];
+        return decode(urlEncoded, UTF_8);
     }
 
     /**
