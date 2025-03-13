@@ -9,7 +9,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
@@ -28,8 +27,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class GoodMorning {
 
     public static final String GREETING_TEMPLATE = "[Good morning]({0}) {1}"; // link, emoji
-    public static final String COMIC_SOURCE_URL = "https://www.reddit.com/r/workchronicles/hot.json?limit=100";
-    public static final List<String> EMOJIS = Arrays.asList(":wave:");
+    public static final String COMIC_SOURCE_URL = "https://www.reddit.com/r/workchronicles/hot.json?limit=200";
+    public static final List<String> EMOJIS = List.of(":wave:");
     private static final HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
 
     public static void main(String[] args) throws Exception {
